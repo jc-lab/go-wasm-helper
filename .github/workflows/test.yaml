@@ -4,12 +4,11 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         node-version: [18, 20, 22]
-    steps:
-      - uses: ./.github/workflows/base.yaml
-        with:
-          node-version: ${{ matrix.node-version }}
+    uses: ./.github/workflows/base.yaml
+    with:
+      node-version: ${{ matrix.node-version }}
+      upload: false

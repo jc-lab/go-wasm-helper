@@ -5,6 +5,9 @@ on:
       node-version:
         type: string
         required: true
+      upload:
+        type: boolean
+        required: false
 
 env:
   GO_VERSION: "1.23"
@@ -45,3 +48,10 @@ jobs:
           yarn install
           yarn test
           yarn build
+
+      - uses: actions/upload-artifact@v3
+        if: ${{ inputs.upload }}
+        with:
+          name: build
+          path: |
+            node/dist/**

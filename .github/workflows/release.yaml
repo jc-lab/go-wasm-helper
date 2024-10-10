@@ -1,0 +1,22 @@
+name: Release
+on:
+  push: {}
+
+jobs:
+  build:
+    uses: ./.github/workflows/base.yaml
+    with:
+      node-version: ${{ matrix.node-version }}
+      upload: false
+  release:
+    needs:
+      - build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Download artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: build
+        path: output/
+    - run: ls -alR output/
+
