@@ -7,7 +7,7 @@ jobs:
     uses: ./.github/workflows/base.yaml
     with:
       node-version: 22
-      upload: false
+      upload: true
   release:
     needs:
       - build
