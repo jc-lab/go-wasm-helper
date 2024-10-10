@@ -4,7 +4,6 @@ on:
 
 jobs:
   test:
-    name: Build And Test
     strategy:
       fail-fast: false
       matrix:

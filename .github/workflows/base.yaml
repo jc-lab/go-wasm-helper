@@ -35,9 +35,9 @@ jobs:
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
-        if: ${{ input.node-version != '' }}
+        if: ${{ inputs.node-version != '' }}
         with:
-          node-version: ${{ input.node-version }}
+          node-version: ${{ inputs.node-version }}
 
       - name: Build And Test
         run: |
