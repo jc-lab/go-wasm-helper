@@ -1,0 +1,45 @@
+name: Release
+on:
+  push:
+    tags:
+      - 'v*'
+jobs:
+  build:
+    uses: ./.github/workflows/base.yaml
+    with:
+      node-version: 22
+      upload: true
+  release:
+    needs:
+      - build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout source
+      uses: actions/checkout@v3
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22
+
+    - name: Set Environment Variables
+      run: |
+        echo "runner_arch=$(uname -m)" | tee -a $GITHUB_ENV
+        echo "package_version=${GITHUB_REF#refs/*/v}" | tee -a $GITHUB_ENV
+
+    - name: Download artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: node-dist
+        path: node/dist/
+    - run: ls -alR node/dist/
+
+    - name: Set version
+      run: node ./.ci/node-set-version.js --package-json package.json ${{ env.package_version }}
+
+    - name: Publish
+      run: |
+        yarn config set npmAuthToken "${NPM_TOKEN}"
+        yarn npm publish --access=public
+      env:
+        NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
