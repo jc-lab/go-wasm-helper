@@ -41,6 +41,8 @@ jobs:
         if: ${{ inputs.node-version != '' }}
         with:
           node-version: ${{ inputs.node-version }}
+          cache: 'yarn'
+          cache-dependency-path: node/yarn.lock
 
       - name: Build And Test
         run: |
