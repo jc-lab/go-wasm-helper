@@ -54,6 +54,6 @@ jobs:
       - uses: actions/upload-artifact@v3
         if: ${{ inputs.upload }}
         with:
-          name: node-dist
+          name: node-lib
           path: |
-            node/dist/**
+            node/lib/**
