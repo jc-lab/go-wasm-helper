@@ -1,0 +1,17 @@
+name: Test
+on:
+  push: {}
+
+jobs:
+  test:
+    name: Build And Test
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [18, 20, 22]
+    steps:
+      - name: Build And Test
+        uses: ./.github/workflows/base
+        with:
+          node-version: ${{ matrix.node-version }}
