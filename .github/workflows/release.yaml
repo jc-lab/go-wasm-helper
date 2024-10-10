@@ -35,7 +35,7 @@ jobs:
     - run: ls -alR node/dist/
 
     - name: Set version
-      run: node ./.ci/node-set-version.js --package-json package.json ${{ env.package_version }}
+      run: node ./.ci/node-set-version.js --package-json node/package.json ${{ env.package_version }}
 
     - name: Publish
       run: |
