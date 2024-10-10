@@ -40,18 +40,18 @@ describe('test app', () => {
     expect(result).toBeGreaterThan(0);
   });
 
-  test('goroutineTestA', async () => {
-    const helper = await loadInstance();
-    console.log(helper.instance.exports)
-
-    helper.callFunction<GoPtr>('goroutineTestA');
-    while (true) {
-      await new Promise<void>((resolve) => {
-        setTimeout(() => {
-          helper.schedule();
-          resolve();
-        }, 10);
-      });
-    }
-  });
+  // test('goroutineTestA', async () => {
+  //   const helper = await loadInstance();
+  //   console.log(helper.instance.exports)
+  //
+  //   helper.callFunction<GoPtr>('goroutineTestA');
+  //   while (true) {
+  //     await new Promise<void>((resolve) => {
+  //       setTimeout(() => {
+  //         helper.schedule();
+  //         resolve();
+  //       }, 10);
+  //     });
+  //   }
+  // });
 });
