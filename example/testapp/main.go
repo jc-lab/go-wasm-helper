@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	_ "github.com/jc-lab/go-wasm-helper/wmem"
+	"github.com/jc-lab/go-wasm-helper/wrefid"
 	"github.com/jc-lab/go-wasm-helper/wret"
 	"github.com/jc-lab/go-wasm-helper/wruntime"
 	"log"
@@ -14,23 +15,23 @@ func main() {
 }
 
 //export sampleData
-func sampleData() wret.RefId {
+func sampleData() wrefid.RefId {
 	return wret.ReturnBuffer([]byte("HELLO WORLD!!!"))
 }
 
 //export sampleError
-func sampleError() wret.RefId {
+func sampleError() wrefid.RefId {
 	return wret.ReturnError(errors.New("sample error"))
 }
 
 //export sampleObject
-func sampleObject() wret.RefId {
+func sampleObject() wrefid.RefId {
 	obj := &SampleObject{}
 	return wret.ReturnObject(obj)
 }
 
 //export goroutineTestA
-func goroutineTestA() wret.RefId {
+func goroutineTestA() wrefid.RefId {
 	go func() {
 		time.Sleep(time.Second)
 		log.Println("HELLO WORLD")
