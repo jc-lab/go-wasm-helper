@@ -51,6 +51,14 @@ func (r RefId) IsObject() bool {
 	return (r & RefIsObject) != 0
 }
 
+func (r RefId) GetObject() interface{} {
+	if !r.IsObject() {
+		panic(fmt.Errorf("refid(0x%d) is not a object", r))
+	}
+	obj, _ := GetKeepaliveObject(r.GetPointer())
+	return obj
+}
+
 func (r RefId) IsError() bool {
 	return (r & RefIsError) != 0
 }

@@ -29,3 +29,8 @@ func KeepaliveObject(obj interface{}) WasmPtr {
 	alivePointers[wasmPtr] = obj
 	return wasmPtr
 }
+
+func GetKeepaliveObject(ptr WasmPtr) (interface{}, bool) {
+	obj, ok := alivePointers[ptr]
+	return obj, ok
+}
