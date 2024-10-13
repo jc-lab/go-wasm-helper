@@ -1,30 +1,29 @@
 package wret
 
 import (
-	"github.com/jc-lab/go-wasm-helper/wmem"
-	"github.com/jc-lab/go-wasm-helper/wrefid"
+	"github.com/jc-lab/go-wasm-helper/whelper"
 )
 
-func ReturnObject(data interface{}) wrefid.RefId {
-	ptr := wmem.KeepaliveObject(data)
-	return wrefid.NewRefId(ptr, wrefid.RetIsObject, -1)
+func ReturnObject(data interface{}) whelper.RefId {
+	ptr := whelper.KeepaliveObject(data)
+	return whelper.NewRefIdWithBytes(ptr, whelper.RefIsObject, -1)
 }
 
-func ReturnBuffer(data []byte) wrefid.RefId {
-	ptr := wmem.KeepaliveObject(data)
-	return wrefid.NewRefId(ptr, wrefid.RetIsBytes, len(data))
+func ReturnBuffer(data []byte) whelper.RefId {
+	ptr := whelper.KeepaliveObject(data)
+	return whelper.NewRefIdWithBytes(ptr, whelper.RefIsBytes, len(data))
 }
 
-func ReturnBufferWithFlag(data []byte, flags wrefid.RefId) wrefid.RefId {
-	ptr := wmem.KeepaliveObject(data)
-	return wrefid.NewRefId(ptr, flags|wrefid.RetIsBytes, len(data))
+func ReturnBufferWithFlag(data []byte, flags whelper.RefId) whelper.RefId {
+	ptr := whelper.KeepaliveObject(data)
+	return whelper.NewRefIdWithBytes(ptr, flags|whelper.RefIsBytes, len(data))
 }
 
-func ReturnVoid() wrefid.RefId {
-	return wrefid.RefId(0)
+func ReturnVoid() whelper.RefId {
+	return whelper.RefId(0)
 }
 
-func ReturnError(err error) wrefid.RefId {
+func ReturnError(err error) whelper.RefId {
 	wrapped := &Error{
 		Message: err.Error(),
 	}
@@ -32,5 +31,5 @@ func ReturnError(err error) wrefid.RefId {
 	if err != nil {
 		panic(err)
 	}
-	return ReturnBufferWithFlag(encoded, wrefid.RetIsError)
+	return ReturnBufferWithFlag(encoded, whelper.RefIsError)
 }

@@ -1,17 +1,10 @@
 import * as msgpack from '@msgpack/msgpack';
+import {RefId, RefIsBytes, RefIsNonPointer, RefSubType} from "./refid";
 
 export type GoPtr = number;
 
-const RetIsObject = 0x80000000n;
-const RetIsError = 0x40000000n;
-const RetIsBytes = 0x20000000n;
-const RetLengthMask = 0x0fffffffn;
-const RetLengthSign = 0x08000000n;
-
-type GoRefId = bigint;
-
 export class GoError extends Error {
-  constructor(message: string) {
+  constructor(message: string, public readonly refId?: RefId) {
     super(message);
   }
 }
@@ -20,14 +13,55 @@ type GoPtrAllocateFunc = (size: number) => GoPtr;
 type GoPtrFreeFunc = (ptr: GoPtr) => void;
 
 export class GoWasmHelper {
-  private readonly fnGoPtrAllocate: GoPtrAllocateFunc;
-  private readonly fnGoPtrFree: GoPtrFreeFunc;
-  private readonly memory: WebAssembly.Memory;
+  public instance!: WebAssembly.Instance;
+  public memory!: WebAssembly.Memory;
+  private fnGoPtrAllocate!: GoPtrAllocateFunc;
+  private fnGoPtrFree!: GoPtrFreeFunc;
+
+  private lastCallbackId = 0;
+  private readonly callbacks: Record<number, Function> = {};
 
   constructor(
     public readonly go: Go,
-    public readonly instance: WebAssembly.Instance
   ) {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    const self = this;
+
+    const mem = () => {
+      // The buffer may change when requesting more memory.
+      return new DataView(this.memory.buffer);
+    }
+
+    // func (refId: uint64, args: any[]) uint64
+    //  args_ptr, args_len
+    go.importObject.env['goCallbackJsHandler'] = function (refIdValue: bigint, args_ptr: number, args_len: number, args_cap: number): bigint {
+      const args: any[] = [];
+      for (let i=0; i<args_len; i++) {
+        args[i] = mem().getBigUint64(args_ptr + 8 * i, true);
+      }
+
+      const refId = new RefId(this, refIdValue);
+      if (!refId.isFunction()) {
+        throw new Error(`refid(${BigInt(refIdValue).toString(16)}) is not function`);
+      }
+      const fn = self.callbacks[Number(refId.getPointer())];
+      console.log('args: ', args_ptr, args_len, args_cap, '::', args.map(v => `0x${v.toString(16)}`))
+      const out = fn.call(null, ...args);
+      if (out instanceof RefId) {
+        return out.value;
+      }
+      return BigInt(out);
+    }
+  }
+
+  public run(instance: WebAssembly.Instance): Promise<void> {
+    this.instance = instance;
+
+    this.memory = this.instance.exports.memory as WebAssembly.Memory;
+    if (!this.memory) {
+      throw new Error('could not find memory in exports');
+    }
+
     this.fnGoPtrAllocate = instance.exports['goPtrAllocate'] as GoPtrAllocateFunc;
     if (!this.fnGoPtrAllocate) {
       throw new Error('could not find goPtrAllocate in exports');
@@ -38,10 +72,7 @@ export class GoWasmHelper {
       throw new Error('could not find goPtrFree in exports');
     }
 
-    this.memory = this.instance.exports.memory as WebAssembly.Memory;
-    if (!this.memory) {
-      throw new Error('could not find memory in exports');
-    }
+    return this.go.run(instance);
   }
 
   public goPtrAllocate(size: number): GoPtr {
@@ -52,50 +83,33 @@ export class GoWasmHelper {
     this.fnGoPtrFree(ptr);
   }
 
-  public callFunction<T extends (Uint8Array | GoPtr | void)>(name: string, ...args: any): T {
-     
+  public callFunction(name: string, ...args: any): RefId {
     const fn = this.instance.exports[name] as Function;
     if (!fn) {
       throw new Error(`no function: ${name}`);
     }
 
-    const retval = fn.call(null, args);
+    const fixedArgs = args.map((v: any) => {
+      if (v instanceof RefId) {
+        return v.value;
+      } else {
+        return v;
+      }
+    });
+
+    const retval = fn.call(null, ...fixedArgs);
     if (typeof retval !== 'bigint') {
       throw new Error('return value is not bigint');
     }
-    const refId: GoRefId = retval;
-    const isObject = (refId & RetIsObject) != 0n;
-    const isBytes = (refId & RetIsBytes) != 0n;
-    const isError = (refId & RetIsError) != 0n;
-    const pointer = Number(refId >> 32n); // it is keep unsigned. do not &0xffffffff.
-    let lengthBig = refId & RetLengthMask;
-    if ((lengthBig & RetLengthSign) != 0n) {
-      lengthBig = -(~lengthBig & RetLengthMask) - 1n;
+    const refId = new RefId(this, retval);
+    if (refId.isBytes()) {
+      refId.loadAndFreeBytes();
     }
-    const length = Number(lengthBig);
-
-    let bytesData: Uint8Array | null = null;
-    if (isBytes) {
-      const view = new Uint8Array(this.memory.buffer, pointer, length);
-      bytesData = view.slice();
-      this.goPtrFree(pointer);
+    if (refId.isError()) {
+      const packedError = msgpack.decode(refId.getBuffer()!) as any;
+      throw new GoError(packedError['message'], refId);
     }
-
-    if (isError) {
-      if (isBytes) {
-        const packedError = msgpack.decode(bytesData!) as any;
-        throw new GoError(packedError['message']);
-      } else {
-        throw new GoError('unknown error');
-      }
-    }
-
-    if (isBytes) {
-      return bytesData! as any;
-    } else {
-      // isObject or zero
-      return pointer as any;
-    }
+    return refId;
   }
 
   public schedule() {
@@ -103,5 +117,11 @@ export class GoWasmHelper {
     if (fnScheduler) {
       fnScheduler();
     }
+  }
+
+  public registerCallback(fn: (...args: bigint[]) => RefId): RefId {
+    const callbackId = ++this.lastCallbackId;
+    this.callbacks[callbackId] = fn;
+    return RefId.from(this, callbackId, RefIsNonPointer, RefSubType.RefSubTypeFunction)
   }
 }
