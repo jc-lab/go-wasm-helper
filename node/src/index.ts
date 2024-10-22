@@ -1,5 +1,11 @@
 import * as msgpack from '@msgpack/msgpack';
-import {RefId, RefIsBytes, RefIsNonPointer, RefSubType} from "./refid";
+import {
+  RefId,
+  RefIsNonPointer,
+  RefSubType
+} from './refid';
+
+export * from './refid';
 
 export type GoPtr = number;
 
