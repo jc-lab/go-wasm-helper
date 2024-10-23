@@ -13,6 +13,10 @@ export class GoError extends Error {
   constructor(message: string, public readonly refId?: RefId) {
     super(message);
   }
+
+  public toString(): string {
+    return `GoError: ${this.message}`;
+  }
 }
 
 type GoPtrAllocateFunc = (size: number) => GoPtr;

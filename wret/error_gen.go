@@ -30,6 +30,25 @@ func (z *Error) DecodeMsg(dc *msgp.Reader) (err error) {
 				err = msgp.WrapError(err, "Message")
 				return
 			}
+		case "stack":
+			var zb0002 uint32
+			zb0002, err = dc.ReadArrayHeader()
+			if err != nil {
+				err = msgp.WrapError(err, "Stack")
+				return
+			}
+			if cap(z.Stack) >= int(zb0002) {
+				z.Stack = (z.Stack)[:zb0002]
+			} else {
+				z.Stack = make([]string, zb0002)
+			}
+			for za0001 := range z.Stack {
+				z.Stack[za0001], err = dc.ReadString()
+				if err != nil {
+					err = msgp.WrapError(err, "Stack", za0001)
+					return
+				}
+			}
 		default:
 			err = dc.Skip()
 			if err != nil {
@@ -42,10 +61,10 @@ func (z *Error) DecodeMsg(dc *msgp.Reader) (err error) {
 }
 
 // EncodeMsg implements msgp.Encodable
-func (z Error) EncodeMsg(en *msgp.Writer) (err error) {
-	// map header, size 1
+func (z *Error) EncodeMsg(en *msgp.Writer) (err error) {
+	// map header, size 2
 	// write "message"
-	err = en.Append(0x81, 0xa7, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65)
+	err = en.Append(0x82, 0xa7, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65)
 	if err != nil {
 		return
 	}
@@ -54,16 +73,39 @@ func (z Error) EncodeMsg(en *msgp.Writer) (err error) {
 		err = msgp.WrapError(err, "Message")
 		return
 	}
+	// write "stack"
+	err = en.Append(0xa5, 0x73, 0x74, 0x61, 0x63, 0x6b)
+	if err != nil {
+		return
+	}
+	err = en.WriteArrayHeader(uint32(len(z.Stack)))
+	if err != nil {
+		err = msgp.WrapError(err, "Stack")
+		return
+	}
+	for za0001 := range z.Stack {
+		err = en.WriteString(z.Stack[za0001])
+		if err != nil {
+			err = msgp.WrapError(err, "Stack", za0001)
+			return
+		}
+	}
 	return
 }
 
 // MarshalMsg implements msgp.Marshaler
-func (z Error) MarshalMsg(b []byte) (o []byte, err error) {
+func (z *Error) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 1
+	// map header, size 2
 	// string "message"
-	o = append(o, 0x81, 0xa7, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65)
+	o = append(o, 0x82, 0xa7, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65)
 	o = msgp.AppendString(o, z.Message)
+	// string "stack"
+	o = append(o, 0xa5, 0x73, 0x74, 0x61, 0x63, 0x6b)
+	o = msgp.AppendArrayHeader(o, uint32(len(z.Stack)))
+	for za0001 := range z.Stack {
+		o = msgp.AppendString(o, z.Stack[za0001])
+	}
 	return
 }
 
@@ -91,6 +133,25 @@ func (z *Error) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "Message")
 				return
 			}
+		case "stack":
+			var zb0002 uint32
+			zb0002, bts, err = msgp.ReadArrayHeaderBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "Stack")
+				return
+			}
+			if cap(z.Stack) >= int(zb0002) {
+				z.Stack = (z.Stack)[:zb0002]
+			} else {
+				z.Stack = make([]string, zb0002)
+			}
+			for za0001 := range z.Stack {
+				z.Stack[za0001], bts, err = msgp.ReadStringBytes(bts)
+				if err != nil {
+					err = msgp.WrapError(err, "Stack", za0001)
+					return
+				}
+			}
 		default:
 			bts, err = msgp.Skip(bts)
 			if err != nil {
@@ -104,7 +165,10 @@ func (z *Error) UnmarshalMsg(bts []byte) (o []byte, err error) {
 }
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
-func (z Error) Msgsize() (s int) {
-	s = 1 + 8 + msgp.StringPrefixSize + len(z.Message)
+func (z *Error) Msgsize() (s int) {
+	s = 1 + 8 + msgp.StringPrefixSize + len(z.Message) + 6 + msgp.ArrayHeaderSize
+	for za0001 := range z.Stack {
+		s += msgp.StringPrefixSize + len(z.Stack[za0001])
+	}
 	return
 }
