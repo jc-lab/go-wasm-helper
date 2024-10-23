@@ -50,5 +50,12 @@ func callbackTest(callbackRef whelper.RefId, a int) whelper.RefId {
 	return whelper.Uint32(result.GetNumber() + 0x2000)
 }
 
+//export bufferReadTest
+func bufferReadTest(param whelper.RefId) whelper.RefId {
+	data := param.GetBuffer()
+	log.Printf("INPUT DATA: %s", string(data))
+	return wret.ReturnBuffer(data)
+}
+
 type SampleObject struct {
 }

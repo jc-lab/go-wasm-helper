@@ -68,4 +68,15 @@ describe('test app', () => {
     expect(result.isNumber()).toBe(true);
     expect(result.getNumber()).toBe(0x12 + 0x100 + 0x1000 + 0x2000);
   });
+
+  test('copyBufferFrom', async () => {
+    const sampleData = Buffer.from('HELLO WORLD');
+
+    const helper = await loadInstance();
+    const param = RefId.copyBufferFrom(helper, sampleData);
+    const result = helper.callFunction('bufferReadTest', param);
+    param.free();
+
+    expect(Buffer.compare(result.loadAndFreeBytes() as any, sampleData)).toBe(0);
+  })
 });

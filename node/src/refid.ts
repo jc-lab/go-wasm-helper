@@ -1,3 +1,5 @@
+import {GoPtr} from "./index";
+
 export type WasmPtr = number;
 export type RefIdValue = bigint;
 
@@ -26,6 +28,7 @@ export enum RefSubType {
 
 interface GoWasmHelperLike {
   memory: WebAssembly.Memory;
+  goPtrAllocate(size: number): GoPtr;
   goPtrFree(ptr: WasmPtr): void;
 }
 
@@ -35,7 +38,8 @@ export class RefId {
 
   constructor(
     helper: GoWasmHelperLike | null,
-    public readonly value: RefIdValue
+    public readonly value: RefIdValue,
+    bytesBuffer?: Uint8Array,
   ) {
     if (helper) {
       this.helper = helper;
@@ -47,8 +51,9 @@ export class RefId {
     ptr: WasmPtr,
     flags: RefIdValue,
     lengthOrSubType: number,
+    bytesBuffer?: Uint8Array,
   ): RefId {
-    return new RefId(helper, (BigInt(ptr) << 32n) | BigInt(flags) | (BigInt(lengthOrSubType) & RefLengthOrSubTypeMask));
+    return new RefId(helper, (BigInt(ptr) << 32n) | BigInt(flags) | (BigInt(lengthOrSubType) & RefLengthOrSubTypeMask), bytesBuffer);
   }
 
   public static number(subtype: number, value: number): RefId {
@@ -81,6 +86,12 @@ export class RefId {
 
   public static Void(): RefId {
     return new RefId(null, RefVoid);
+  }
+
+  public static copyBufferFrom(helper: GoWasmHelperLike, data: Uint8Array): RefId {
+    const ptr = helper.goPtrAllocate(data.byteLength);
+    new Uint8Array(helper.memory.buffer).set(data, ptr);
+    return RefId.from(helper, ptr, RefIsBytes, data.byteLength);
   }
 
   isVoid(): boolean {
@@ -166,6 +177,13 @@ export class RefId {
 
   isFunction(): boolean {
     return this.getSubType() === RefSubType.RefSubTypeFunction;
+  }
+
+  free(): void {
+    if (this.isNonPointer()) {
+      throw new Error('is non-pointer');
+    }
+    this.helper.goPtrFree(this.getPointer());
   }
   //
   // toFunction(): CallbackFunc {
