@@ -31,43 +31,59 @@ export class GoWasmHelper {
   private lastCallbackId = 0;
   private readonly callbacks: Record<number, Function> = {};
 
-  constructor(
-    public readonly go: Go,
-  ) {
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
-    const self = this;
+    constructor(
+        public readonly go: Go,
+    ) {
+        // eslint-disable-next-line @typescript-eslint/no-this-alias
+        const self = this;
 
-    const mem = () => {
-      // The buffer may change when requesting more memory.
-      return new DataView(this.memory.buffer);
+        const mem = () => {
+            // The buffer may change when requesting more memory.
+            return new DataView(this.memory.buffer);
+        }
+
+        const gojs = go.importObject.gojs || go.importObject.env;
+        const isTinygo = !!gojs['runtime.sleepTicks'];
+
+        const tinygoCallbackJsHandler = function (refIdValue: bigint, args_ptr: number, args_len: number): bigint {
+            const args: any[] = [];
+            for (let i = 0; i < args_len; i++) {
+                args[i] = mem().getBigUint64(args_ptr + 8 * i, true);
+            }
+
+            const refId = new RefId(this, BigInt(refIdValue));
+            if (!refId.isFunction()) {
+                throw new Error(`refid(${BigInt(refIdValue).toString(16)}) is not function`);
+            }
+            const fn = self.callbacks[Number(refId.getPointer())];
+            const out = fn.call(null, ...args);
+            if (out instanceof RefId) {
+                return out.value;
+            }
+            return BigInt(out);
+        };
+        if (isTinygo) {
+            gojs['github.com/jc-lab/go-wasm-helper.goCallbackJsHandler'] = tinygoCallbackJsHandler;
+            gojs['goCallbackJsHandler'] = tinygoCallbackJsHandler;
+        } else {
+            const goCallbackJsHandler = function (sp: number) {
+                sp >>>= 0;
+                const m = mem();
+                const refId = m.getBigInt64(sp + 8, true);
+                const args_ptr = m.getUint32(sp + 16, true);
+                const args_len = m.getUint32(sp + 20, true);
+                const result = tinygoCallbackJsHandler(refId, args_ptr, args_len);
+                m.setBigUint64(sp + 24, result, true);
+            }
+            gojs['github.com/jc-lab/go-wasm-helper.goCallbackJsHandler'] = goCallbackJsHandler;
+            gojs['goCallbackJsHandler'] = goCallbackJsHandler;
+        }
     }
-
-    // func (refId: uint64, args: any[]) uint64
-    //  args_ptr, args_len
-    go.importObject.env['goCallbackJsHandler'] = function (refIdValue: bigint, args_ptr: number, args_len: number, args_cap: number): bigint {
-      const args: any[] = [];
-      for (let i=0; i<args_len; i++) {
-        args[i] = mem().getBigUint64(args_ptr + 8 * i, true);
-      }
-
-      const refId = new RefId(this, refIdValue);
-      if (!refId.isFunction()) {
-        throw new Error(`refid(${BigInt(refIdValue).toString(16)}) is not function`);
-      }
-      const fn = self.callbacks[Number(refId.getPointer())];
-      console.log('args: ', args_ptr, args_len, args_cap, '::', args.map(v => `0x${v.toString(16)}`))
-      const out = fn.call(null, ...args);
-      if (out instanceof RefId) {
-        return out.value;
-      }
-      return BigInt(out);
-    }
-  }
 
   public run(instance: WebAssembly.Instance): Promise<void> {
     this.instance = instance;
 
-    this.memory = this.instance.exports.memory as WebAssembly.Memory;
+    this.memory = (this.instance.exports.mem || this.instance.exports.memory) as WebAssembly.Memory;
     if (!this.memory) {
       throw new Error('could not find memory in exports');
     }

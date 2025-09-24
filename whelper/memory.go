@@ -7,11 +7,13 @@ import (
 var alivePointers = map[WasmPtr]interface{}{}
 
 //export goPtrAllocate
+//go:wasmexport goPtrAllocate
 func GoPtrAllocate(size uint32) WasmPtr {
 	return KeepaliveObject(make([]byte, size))
 }
 
 //export goPtrFree
+//go:wasmexport goPtrFree
 func GoPtrFree(ptr WasmPtr) {
 	old := alivePointers[ptr]
 	delete(alivePointers, ptr)

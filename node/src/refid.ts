@@ -12,18 +12,18 @@ export const RefIsBytes: RefIdValue = 0x10000000n;
 export const RefLengthOrSubTypeMask: RefIdValue = 0x0fffffffn;
 
 export enum RefSubType {
-  RefSubTypeMask = 0x0fff0000,
+  RefSubTypeMask            = 0x0fff0000,
 
   RefSubTypeNumber          = 0x0010000,
-  RefSubTypeNumberUnsigned = RefSubTypeNumber | 0x1000,
+  RefSubTypeNumberUnsigned  = RefSubTypeNumber | 0x1000,
   RefSubTypeInt8            = RefSubTypeNumber | 0x0001,
   RefSubTypeUint8           = RefSubTypeNumberUnsigned | 0x0001,
-  RefSubTypeInt16   = RefSubTypeNumber | 0x0002,
+  RefSubTypeInt16           = RefSubTypeNumber | 0x0002,
   RefSubTypeUint16          = RefSubTypeNumberUnsigned | 0x0002,
   RefSubTypeInt32           = RefSubTypeNumber | 0x0004,
   RefSubTypeUint32          = RefSubTypeNumberUnsigned | 0x0004,
 
-  RefSubTypeFunction = 0x0010001,
+  RefSubTypeFunction        = 0x0020000,
 }
 
 interface GoWasmHelperLike {

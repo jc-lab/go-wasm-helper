@@ -5,7 +5,7 @@ import {
   GoWasmHelper,
 } from '../src';
 
-import './tinygo_wasm_exec';
+import './go_wasm_exec';
 import {RefId} from "../src/refid";
 
 async function loadInstance(): Promise<GoWasmHelper> {
@@ -15,7 +15,7 @@ async function loadInstance(): Promise<GoWasmHelper> {
 
   const helper = new GoWasmHelper(go);
 
-  const testAppWasmBytes = fs.readFileSync(path.join(__dirname, './testapp.wasm'));
+  const testAppWasmBytes = fs.readFileSync(path.join(__dirname, './testapp-go.wasm'));
   const result = await WebAssembly.instantiate(testAppWasmBytes, go.importObject);
 
   helper.run(result.instance); // do not wait (it is tinygo's bug...?)
@@ -65,6 +65,7 @@ describe('test app', () => {
       return RefId.uint32(Number(a) + 0x100);
     });
     const result = helper.callFunction('callbackTest', jsCallbackRefId, 0x12);
+    console.log('callbackTest result: ', result);
     expect(result.isNumber()).toBe(true);
     expect(result.getNumber()).toBe(0x12 + 0x100 + 0x1000 + 0x2000);
   });
